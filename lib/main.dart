@@ -5,7 +5,6 @@ import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:highlight_text/highlight_text.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -80,9 +79,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
   bool _isListening = false;
   String _text = 'Press the button and start speaking';
   double _confidence = 1.0;
-   String _response = ""; // To store the AI's response
+  String _response = ""; // AI response
   bool _isLoading = false; 
-  // String _response;
 
   @override
   void initState() {
@@ -94,7 +92,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Confidence: ${(_confidence * 100.0).toStringAsFixed(1)}%'),
+        title: Text("AI Chatbot"),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: AvatarGlow(
@@ -123,22 +121,15 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: fetchData,
-                child: Text('Fetch Data'),
-              ),
-               SizedBox(height: 20),
-            // Display the AI's response or loading indicator
-            _isLoading
-                ? CircularProgressIndicator() // Show loading indicator
-                : Text(
-                    _response,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
+              _isLoading
+                  ? CircularProgressIndicator() // Show loading indicator
+                  : Text(
+                      _response.isNotEmpty ? _response : "Waiting for response...",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                
             ],
           ),
         ),
@@ -170,14 +161,89 @@ class _SpeechScreenState extends State<SpeechScreen> {
     }
   }
 
-  // Future<void> _saveTextToFile() async {
-  //   final directory = await getApplicationDocumentsDirectory();
-  //   final file = File('${directory.path}/speech_text.txt');
-  //   await file.writeAsString(_text);
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     SnackBar(content: Text('Text saved to ${file.path}')),
-  //   );
-  // }
+Future<void> fetchData() async {
+  const url = "http://csai01:8000/generate/";
+
+  final payload = {
+    "prompt": _text,
+    "max_tokens": 200,
+  };
+
+  setState(() {
+    _isLoading = true;
+    _response = "";
+  });
+
+  try {
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode(payload),
+    );
+
+    print("Status Code: ${response.statusCode}");
+    print("Raw Response Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      try {
+        final responseData = json.decode(response.body);
+        print("Decoded Response: $responseData");
+
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('response')) {
+            final responseText = responseData['response'];
+
+            if (responseText is Map<String, dynamic> && responseText.containsKey('content')) {
+              setState(() {
+                _response = responseText['content']; // Extract only the "content" field
+                _isLoading = false;
+              });
+            } else {
+              setState(() {
+                _response = "Unexpected response format: ${json.encode(responseText)}";
+                _isLoading = false;
+              });
+            }
+          } else {
+            setState(() {
+              _response = "Missing 'response' key in API response.";
+              _isLoading = false;
+            });
+          }
+        } else {
+          setState(() {
+            _response = "Unexpected response format: ${json.encode(responseData)}";
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _response = "JSON Decoding Error: $e\nRaw: ${response.body}";
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() {
+        _response = "Request failed with status: ${response.statusCode}\nBody: ${response.body}";
+        _isLoading = false;
+      });
+    }
+  } catch (error) {
+    setState(() {
+      _response = "Network Error: $error";
+      _isLoading = false;
+    });
+  }
+}
+
+}
+
+
+
+
+
+
+
 
 
 //   Future<void> fetchData() async {
@@ -223,62 +289,3 @@ class _SpeechScreenState extends State<SpeechScreen> {
 //     print("Error: $error");
 //   }
 // }
-Future<void> fetchData() async {
-  const url = "http://csai01:8000/generate/";
-
-
-  // Define the AI chatbot prompt
-  final prompt = """
-You are a compassionate and empathetic AI chatbot designed to support veterans suffering from depression. Your primary goal is to provide a safe, non-judgmental space for veterans to express their feelings and thoughts. Carefully analyze the veteran's choice of words, tone, and emotional state in their messages, and respond in a way that is supportive, understanding, and encouraging.
-
-**Guidelines for Responses:**
-1. **Empathy and Validation**: Acknowledge the veteran's feelings and experiences. Use phrases like "That sounds really tough" or "I can understand why you feel that way."
-2. **Avoid Judgment**: Never dismiss or invalidate their emotions. Avoid phrases like "You shouldn't feel that way" or "Just cheer up."
-3. **Encourage Expression**: Gently encourage them to share more if they seem open to it. For example, "Would you like to talk more about what's been on your mind?"
-4. **Offer Support**: Provide reassurance and remind them that they are not alone. For example, "It's okay to feel this way, and I'm here to listen."
-5. **Avoid Giving Direct Advice**: Unless explicitly asked, avoid giving direct advice. Instead, guide them toward self-reflection. For example, "What do you think might help you feel better?"
-6. **Monitor for Crisis**: If the veteran expresses thoughts of self-harm or suicide, respond with immediate concern and provide resources. For example, "I'm really concerned about what you're saying. Please reach out to a crisis hotline or a trusted person right away. You are not alone."
-7. **Short but Concise**: Keep your responses to a few sentences."
-
-**Veteran's Message:**
-$_text
-
-**AI Response:**
-""";
-
-  final payload = {
-    "prompt": prompt,
-    "max_tokens": 200,
-  };
-
-  setState(() {
-    _isLoading = true; // Show loading indicator
-  });
-
-  try {
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode(payload),
-    );
-
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      setState(() {
-        _response = responseData['response']; // Update the AI's response
-        _isLoading = false; // Hide loading indicator
-      });
-    } else {
-      setState(() {
-        _response = "Request failed with status code: ${response.statusCode}";
-        _isLoading = false; // Hide loading indicator
-      });
-    }
-  } catch (error) {
-    setState(() {
-      _response = "Error: $error";
-      _isLoading = false; // Hide loading indicator
-    });
-  }
-}
-}
