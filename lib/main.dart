@@ -167,6 +167,7 @@ import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
+import 'package:flutter_tts/flutter_tts.dart'; 
 
 void main() {
   runApp(MyApp());
@@ -200,12 +201,14 @@ class _ChatScreenState extends State<ChatScreen> {
   String _partialText = ""; // To store partial speech recognition results
   bool _isButtonDisabled = false; // To debounce the microphone button
   bool _isProcessing = false; // To show loading state on the microphone button
+  late FlutterTts _flutterTts;
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
     _initializeSpeech(); // Initialize speech recognition on app start
+     _initializeTts();
   }
 
   Future<void> _initializeSpeech() async {
@@ -219,7 +222,16 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+   Future<void> _initializeTts() async {
+    _flutterTts = FlutterTts();
+    await _flutterTts.setLanguage("en-US"); // Set language
+    await _flutterTts.setSpeechRate(0.5); // Adjust speech rate (0.0 to 1.0)
+    await _flutterTts.setVolume(1.0); // Adjust volume (0.0 to 1.0)
+    await _flutterTts.setPitch(1.0); // Adjust pitch (0.5 to 2.0)
+  }
+
   void _listen() async {
+          _stopSpeaking();
     if (_isButtonDisabled || _isProcessing) return; // Prevent multiple clicks
     _isButtonDisabled = true;
     _isProcessing = true;
@@ -273,9 +285,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+          String aiResponse = responseData['response']['content'];
         setState(() {
           messages.add({"role": "ai", "message": responseData['response']['content']});
         });
+          _speak(aiResponse);
       } else {
         setState(() {
           messages.add({"role": "ai", "message": "Error: ${response.statusCode}"});
@@ -289,6 +303,14 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _isLoading = false);
     }
   }
+
+   Future<void> _speak(String text) async {
+    await _flutterTts.speak(text); // Convert text to speech
+  }
+
+  Future<void> _stopSpeaking() async {
+  await _flutterTts.stop();
+}
 
   @override
   Widget build(BuildContext context) {
