@@ -1,8 +1,15 @@
+
 // import 'dart:convert';
 // import 'package:avatar_glow/avatar_glow.dart';
 // import 'package:flutter/material.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;
 // import 'package:http/http.dart' as http;
+// import 'package:flutter_tts/flutter_tts.dart'; 
+// import 'package:porcupine/porcupine.dart';
+// import 'package:porcupine/porcupine_manager.dart';
+// import 'package:porcupine/porcupine_error.dart';
+
+
 
 // void main() {
 //   runApp(MyApp());
@@ -34,44 +41,95 @@
 //   List<Map<String, String>> messages = [];
 //   bool _isLoading = false;
 //   String _partialText = ""; // To store partial speech recognition results
+//   bool _isButtonDisabled = false; // To debounce the microphone button
+//   bool _isProcessing = false; // To show loading state on the microphone button
+//   late FlutterTts _flutterTts;
+//   late Porcupine _porcupine; // For wake word detection
+//   late PorcupineManager _porcupineManager; // For wake word detection
+
 
 //   @override
 //   void initState() {
 //     super.initState();
 //     _speech = stt.SpeechToText();
+//     _initializeSpeech(); // Initialize speech recognition on app start
+//      _initializeTts();
 //   }
 
-//   void _listen() async {
-//     if (!_isListening) {
-//       bool available = await _speech.initialize(
-//         onStatus: (val) => print('onStatus: $val'),
-//         onError: (val) => print('onError: $val'),
-//       );
-//       if (available) {
-//         setState(() => _isListening = true);
-//         _speech.listen(
-//           onResult: (val) {
-//             if (val.finalResult) {
-//               // Only process final recognized speech
-//               setState(() {
-//                 String recognizedText = val.recognizedWords;
-//                 messages.add({"role": "user", "message": recognizedText});
-//                 _fetchResponse(recognizedText);
-//                 _partialText = ""; // Clear partial text
-//               });
-//             } else {
-//               // Store partial text but don't create a text bubble
-//               setState(() {
-//                 _partialText = val.recognizedWords;
-//               });
-//             }
-//           },
-//         );
-//       }
-//     } else {
-//       setState(() => _isListening = false);
-//       _speech.stop();
+//   Future<void> _initializeSpeech() async {
+//     bool available = await _speech.initialize(
+//       onStatus: (val) => print('onStatus: $val'),
+//       onError: (val) => print('onError: $val'),
+//     );
+//     if (!available) {
+//       // Handle case where speech recognition is not available
+//       print("Speech recognition not available");
 //     }
+//   }
+
+//    Future<void> _initializeTts() async {
+//     _flutterTts = FlutterTts();
+//     await _flutterTts.setLanguage("en-US"); // Set language
+//     await _flutterTts.setSpeechRate(0.5); // Adjust speech rate (0.0 to 1.0)
+//     await _flutterTts.setVolume(1.0); // Adjust volume (0.0 to 1.0)
+//     await _flutterTts.setPitch(1.0); // Adjust pitch (0.5 to 2.0)
+//   }
+
+//   void createPorcupineManager() async {
+//     try{
+//         _porcupineManager = await PorcupineManager.fromKeywords(
+//             ["assets/whisper.ppn"],
+//             _wakeWordCallback);
+//     } on PvError catch (err) {
+//         // handle porcupine init error
+//     }
+// }
+
+//    void _wakeWordCallback(int keywordIndex){
+//     if(keywordIndex == 0){
+//         // picovoice detected
+//     }
+// }
+
+
+//   void _listen() async {
+//           _stopSpeaking();
+//     if (_isButtonDisabled || _isProcessing) return; // Prevent multiple clicks
+//     _isButtonDisabled = true;
+//     _isProcessing = true;
+
+//     setState(() {
+//       _isListening = !_isListening;
+//       if (!_isListening) {
+//         _speech.stop();
+//       }
+//     });
+
+//     if (_isListening) {
+//       _speech.listen(
+//         onResult: (val) {
+//           if (val.finalResult) {
+//             setState(() {
+//               String recognizedText = val.recognizedWords;
+//               messages.add({"role": "user", "message": recognizedText});
+//               _fetchResponse(recognizedText);
+//               _partialText = ""; // Clear partial text
+//             });
+//           } else {
+//             setState(() {
+//               _partialText = val.recognizedWords; // Update partial text
+//             });
+//           }
+//         },
+//       );
+//     }
+
+//     // Re-enable the button after a short delay
+//     Future.delayed(Duration(milliseconds: 500), () {
+//       _isButtonDisabled = false;
+//       _isProcessing = false;
+//       setState(() {}); // Update UI to remove loading state
+//     });
 //   }
 
 //   Future<void> _fetchResponse(String prompt) async {
@@ -89,9 +147,11 @@
 
 //       if (response.statusCode == 200) {
 //         final responseData = json.decode(response.body);
+//           String aiResponse = responseData['response']['content'];
 //         setState(() {
 //           messages.add({"role": "ai", "message": responseData['response']['content']});
 //         });
+//           _speak(aiResponse);
 //       } else {
 //         setState(() {
 //           messages.add({"role": "ai", "message": "Error: ${response.statusCode}"});
@@ -105,6 +165,14 @@
 //       setState(() => _isLoading = false);
 //     }
 //   }
+
+//    Future<void> _speak(String text) async {
+//     await _flutterTts.speak(text); // Convert text to speech
+//   }
+
+//   Future<void> _stopSpeaking() async {
+//   await _flutterTts.stop();
+// }
 
 //   @override
 //   Widget build(BuildContext context) {
@@ -153,7 +221,9 @@
 //             repeat: true,
 //             child: FloatingActionButton(
 //               onPressed: _listen,
-//               child: Icon(_isListening ? Icons.mic : Icons.mic_none),
+//               child: _isProcessing
+//                   ? CircularProgressIndicator(color: Colors.white)
+//                   : Icon(_isListening ? Icons.mic : Icons.mic_none),
 //             ),
 //           ),
 //         ],
@@ -162,12 +232,16 @@
 //   }
 // }
 
+
 import 'dart:convert';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
-import 'package:flutter_tts/flutter_tts.dart'; 
+import 'package:flutter_tts/flutter_tts.dart';
+// import 'package:porcupine/porcupine_manager.dart';
+// import 'package:porcupine/porcupine_error.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -202,13 +276,15 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isButtonDisabled = false; // To debounce the microphone button
   bool _isProcessing = false; // To show loading state on the microphone button
   late FlutterTts _flutterTts;
+  // late PorcupineManager _porcupineManager; // For wake word detection
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
     _initializeSpeech(); // Initialize speech recognition on app start
-     _initializeTts();
+    _initializeTts();
+    // createPorcupineManager(); // Initialize PorcupineManager
   }
 
   Future<void> _initializeSpeech() async {
@@ -222,7 +298,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-   Future<void> _initializeTts() async {
+  Future<void> _initializeTts() async {
     _flutterTts = FlutterTts();
     await _flutterTts.setLanguage("en-US"); // Set language
     await _flutterTts.setSpeechRate(0.5); // Adjust speech rate (0.0 to 1.0)
@@ -230,8 +306,41 @@ class _ChatScreenState extends State<ChatScreen> {
     await _flutterTts.setPitch(1.0); // Adjust pitch (0.5 to 2.0)
   }
 
+  // void createPorcupineManager() async {
+  //   try {
+  //     _porcupineManager = await PorcupineManager.fromKeywords(
+  //       ["assets/whisper.ppn"], // Path to your wake word model
+  //       _wakeWordCallback,
+  //     );
+  //   } on PvError catch (err) {
+  //     // Handle Porcupine initialization error
+  //     print("Porcupine initialization error: $err");
+  //   }
+  // }
+
+  // void _wakeWordCallback(int keywordIndex) {
+  //   if (keywordIndex == 0) {
+  //     // Wake word "whisper" detected
+  //     print("Wake word detected!");
+  //     _listen(); // Start listening to the user's speech
+  //   }
+  // }
+
+  // Future<void> _startWakeWordDetection() async {
+  //   try {
+  //     await _porcupineManager.start();
+  //   } on PvAudioException catch (ex) {
+  //     // Handle audio exception
+  //     print("Audio exception: $ex");
+  //   }
+  // }
+
+  // Future<void> _stopWakeWordDetection() async {
+  //   await _porcupineManager.stop();
+  // }
+
   void _listen() async {
-          _stopSpeaking();
+    _stopSpeaking();
     if (_isButtonDisabled || _isProcessing) return; // Prevent multiple clicks
     _isButtonDisabled = true;
     _isProcessing = true;
@@ -285,11 +394,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-          String aiResponse = responseData['response']['content'];
+        String aiResponse = responseData['response']['content'];
         setState(() {
-          messages.add({"role": "ai", "message": responseData['response']['content']});
+          messages.add({"role": "ai", "message": aiResponse});
         });
-          _speak(aiResponse);
+        _speak(aiResponse);
       } else {
         setState(() {
           messages.add({"role": "ai", "message": "Error: ${response.statusCode}"});
@@ -304,13 +413,13 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-   Future<void> _speak(String text) async {
+  Future<void> _speak(String text) async {
     await _flutterTts.speak(text); // Convert text to speech
   }
 
   Future<void> _stopSpeaking() async {
-  await _flutterTts.stop();
-}
+    await _flutterTts.stop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,4 +477,10 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
+  // @override
+  // void dispose() {
+  //   _porcupineManager.delete(); // Release PorcupineManager resources
+  //   super.dispose();
+  // }
 }
