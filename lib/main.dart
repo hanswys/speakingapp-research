@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:porcupine_flutter/porcupine_manager.dart';
 import 'package:porcupine_flutter/porcupine_error.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(MyApp());
@@ -88,9 +89,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _wakeWordCallback(int keywordIndex) {
      if (keywordIndex == 0) {
-        // picovoice detected
         print("pico word detected!");
-        runApp(MyApp());
+        _launchSiriShortcut("Open App");
     }
     else if (keywordIndex == 1) {
         // porcupine detected
@@ -98,6 +98,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
     }
   }
+
+  Future<void> _launchSiriShortcut(String shortcutName) async {
+  final uri = Uri.parse("shortcuts://run-shortcut?name=$shortcutName");
+
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri);
+  } else {
+    print("Could not launch Siri Shortcut");
+  }
+}
+
 
   void _listen() async {
     _stopSpeaking();
