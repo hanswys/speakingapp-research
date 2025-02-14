@@ -2,9 +2,18 @@ PODS:
   - Flutter (1.0.0)
   - flutter_tts (0.0.1):
     - Flutter
+  - flutter_voice_processor (1.1.2):
+    - Flutter
+    - ios-voice-processor (~> 1.2.0)
+  - ios-voice-processor (1.2.0)
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - Porcupine-iOS (3.0.4):
+    - ios-voice-processor (~> 1.2.0)
+  - porcupine_flutter (3.0.4):
+    - Flutter
+    - Porcupine-iOS (~> 3.0.4)
   - speech_to_text (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -14,11 +23,15 @@ PODS:
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
+  - flutter_voice_processor (from `.symlinks/plugins/flutter_voice_processor/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - porcupine_flutter (from `.symlinks/plugins/porcupine_flutter/ios`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
 
 SPEC REPOS:
   trunk:
+    - ios-voice-processor
+    - Porcupine-iOS
     - Try
 
 EXTERNAL SOURCES:
@@ -26,15 +39,23 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_tts:
     :path: ".symlinks/plugins/flutter_tts/ios"
+  flutter_voice_processor:
+    :path: ".symlinks/plugins/flutter_voice_processor/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  porcupine_flutter:
+    :path: ".symlinks/plugins/porcupine_flutter/ios"
   speech_to_text:
     :path: ".symlinks/plugins/speech_to_text/darwin"
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_tts: b88dbc8655d3dc961bc4a796e4e16a4cc1795833
+  flutter_voice_processor: f60363f959515eaebc35bcaaf26017596c953fc6
+  ios-voice-processor: 6b5ca08962f39e434fe39dca0f483d923a3b1b97
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  Porcupine-iOS: da103a8848ce6b36acd4a5e42bb811d4532dd515
+  porcupine_flutter: 3ff58af55f1188dc25d41ed6be293123a7e2aa34
   speech_to_text: 9dc43a5df3cbc2813f8c7cc9bd0fbf94268ed7ac
   Try: 5ef669ae832617b3cee58cb2c6f99fb767a4ff96
 
