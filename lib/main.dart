@@ -10,6 +10,7 @@ import 'package:porcupine_flutter/porcupine_manager.dart';
 import 'package:porcupine_flutter/porcupine_error.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// SOLUTION: GET MICROPHONE ALWAYS ON THE APP AND RECORD TEXT AFTER WAKE WORD 
 void main() {
   runApp(MyApp());
 }
@@ -49,10 +50,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    createPorcupineManager(); // Initialize PorcupineManager
     _speech = stt.SpeechToText();
     _initializeSpeech(); // Initialize speech recognition on app start
     _initializeTts();
-    createPorcupineManager(); // Initialize PorcupineManager
   }
 
   Future<void> _initializeSpeech() async {
@@ -82,31 +83,22 @@ class _ChatScreenState extends State<ChatScreen> {
       _wakeWordCallback, // Named argument
     );
     await _porcupineManager.start(); // Start listening for the wake word
+    print("PorcupineManager initialized");
   } on PorcupineException catch (err) {
     // Handle PorcupineManager initialization error
   }
 }
 
-  void _wakeWordCallback(int keywordIndex) {
-     if (keywordIndex == 0) {
-        print("pico word detected!");
-        _launchSiriShortcut("Open App");
-    }
-    else if (keywordIndex == 1) {
-        // porcupine detected
-        print("porcupine word detected!");
-
-    }
+  void _wakeWordCallback(int keywordIndex) async {
+  if (keywordIndex == 0) {
+    print("pico word detected!");
+    await _porcupineManager.stop(); // Stop wake word detection
+    _listen();
+  } else if (keywordIndex == 1) {
+    print("porcupine word detected!");
   }
 
-  Future<void> _launchSiriShortcut(String shortcutName) async {
-  final uri = Uri.parse("shortcuts://run-shortcut?name=$shortcutName");
 
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri);
-  } else {
-    print("Could not launch Siri Shortcut");
-  }
 }
 
 
@@ -116,6 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _isButtonDisabled = true;
     _isProcessing = true;
 
+    //flips boolean state 
     setState(() {
       _isListening = !_isListening;
       if (!_isListening) {
@@ -125,14 +118,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (_isListening) {
       _speech.listen(
-        onResult: (val) {
+        onResult: (val) async{
           if (val.finalResult) {
             setState(() {
               String recognizedText = val.recognizedWords;
               messages.add({"role": "user", "message": recognizedText});
-              _fetchResponse(recognizedText);
+              // _fetchResponse(recognizedText);
               _partialText = ""; // Clear partial text
             });
+          await _porcupineManager.start();
+          print("PorcupineManager restarted for wake word detection");
           } else {
             setState(() {
               _partialText = val.recognizedWords; // Update partial text
@@ -251,7 +246,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    _porcupineManager.delete(); // Release PorcupineManager resources
+    // _porcupineManager.delete(); // Release PorcupineManager resources
     super.dispose();
   }
 }
+
