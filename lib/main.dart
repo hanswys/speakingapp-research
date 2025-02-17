@@ -123,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
             setState(() {
               String recognizedText = val.recognizedWords;
               messages.add({"role": "user", "message": recognizedText});
-              // _fetchResponse(recognizedText);
+              _fetchResponse(recognizedText);
               _partialText = ""; // Clear partial text
             });
           await _porcupineManager.start();
