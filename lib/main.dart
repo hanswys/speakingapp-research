@@ -10,7 +10,7 @@ import 'package:porcupine_flutter/porcupine_manager.dart';
 import 'package:porcupine_flutter/porcupine_error.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// SOLUTION: GET MICROPHONE ALWAYS ON THE APP AND RECORD TEXT AFTER WAKE WORD 
+// SOLUTION: USING BRIDGE PATTERN TO BE ABLE TO SWITCH BETWEEN PLATFORMS WITHOUT NEEDING TO CHANGE THE CODE
 void main() {
   runApp(MyApp());
 }
@@ -108,7 +108,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _isButtonDisabled = true;
     _isProcessing = true;
 
-    //flips boolean state 
     setState(() {
       _isListening = !_isListening;
       if (!_isListening) {
