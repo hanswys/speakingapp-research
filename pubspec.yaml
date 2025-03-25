@@ -43,6 +43,7 @@ dependencies:
   flutter_voice_processor: ^1.0.0  # Use the latest version
   porcupine_flutter: ^3.0.4 
   url_launcher: ^6.1.14
+  provider: ^6.1.2
   # loading_indicator: ^3.0.1
   # downloads_path_provider: any
 
